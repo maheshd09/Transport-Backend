@@ -22,9 +22,8 @@ public class CustomerService {
     }
 
     public List<Customer> list() {
-        return customerRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .toList();
+        return customerRepository.findAll(org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
     }
 
     public Customer save(CustomerRequest req, Long id) {

@@ -39,10 +39,24 @@ public class TripController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long vehicleId) {
+            @RequestParam(required = false) String vehicleId) {
         // Cap page size to prevent abuse
         int safeSize = Math.min(size, 200);
-        return service.list(page, safeSize, status, vehicleId);
+
+        String cleanStatus = null;
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status) && !"__all__".equalsIgnoreCase(status)) {
+            cleanStatus = status.trim();
+        }
+
+        Long cleanVehicleId = null;
+        if (vehicleId != null && !vehicleId.isBlank() && !"ALL".equalsIgnoreCase(vehicleId) && !"__all__".equalsIgnoreCase(vehicleId)) {
+            try {
+                cleanVehicleId = Long.parseLong(vehicleId.trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        return service.list(page, safeSize, cleanStatus, cleanVehicleId);
     }
 
     @GetMapping("/{id}")
