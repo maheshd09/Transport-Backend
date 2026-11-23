@@ -1,6 +1,5 @@
 package com.transport.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,8 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.transport.dto.PagedResponse;
 import com.transport.dto.TripRequest;
 import com.transport.entity.Trip;
 import com.transport.service.TripService;
@@ -23,15 +24,25 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/trips")
 public class TripController {
 
-	private final TripService service;
+    private final TripService service;
 
     public TripController(TripService service) {
         this.service = service;
     }
 
+    /**
+     * GET /api/trips?page=0&size=20&status=Pending&vehicleId=5
+     * Returns paginated response with metadata.
+     */
     @GetMapping
-    public List<Trip> list() {
-        return service.list();
+    public PagedResponse<Trip> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long vehicleId) {
+        // Cap page size to prevent abuse
+        int safeSize = Math.min(size, 200);
+        return service.list(page, safeSize, status, vehicleId);
     }
 
     @GetMapping("/{id}")

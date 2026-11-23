@@ -4,11 +4,14 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.transport.dto.ExpenseRequest;
+import com.transport.dto.PagedResponse;
 import com.transport.entity.Expense;
 import com.transport.exception.ApiException;
 import com.transport.repository.ExpenseRepository;
@@ -18,7 +21,7 @@ import com.transport.repository.VehicleRepository;
 @Service
 public class ExpenseService {
 
-	private static final Set<String> CATEGORIES =
+    private static final Set<String> CATEGORIES =
             Set.of("Fuel", "Toll", "Food", "Maintenance", "Driver Allowance", "Other");
 
     private final ExpenseRepository expenseRepository;
@@ -32,14 +35,21 @@ public class ExpenseService {
         this.tripRepository = tripRepository;
     }
 
-    public List<Expense> list() {
-        return expenseRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .toList();
+    // ─── Paginated list with optional vehicle filter ──────────────────────────
+    @Transactional(readOnly = true)
+    public PagedResponse<Expense> list(int page, int size, Long vehicleId) {
+        int safeSize = Math.min(size, 200);
+        Pageable pageable = PageRequest.of(page, safeSize);
+        if (vehicleId != null) {
+            return PagedResponse.of(expenseRepository.findByVehicleIdOrderByDateDesc(vehicleId, pageable));
+        }
+        return PagedResponse.of(expenseRepository.findAllByOrderByDateDescCreatedAtDesc(pageable));
     }
 
+    // For trip detail page — small list, no pagination needed
+    @Transactional(readOnly = true)
     public List<Expense> listByTripId(Long tripId) {
-        return expenseRepository.findByTripId(tripId);
+        return expenseRepository.findByTripIdOrderByDateDesc(tripId);
     }
 
     @Transactional

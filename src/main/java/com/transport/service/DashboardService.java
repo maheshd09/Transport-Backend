@@ -51,12 +51,13 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardStatsResponse getStats() {
-        List<Trip> allTrips = tripRepository.findAllByOrderByCreatedAtDesc();
+        List<Trip> allTrips = tripRepository.findAllByOrderByCreatedAtDesc(
+                org.springframework.data.domain.PageRequest.of(0, 500)).getContent();
         List<Expense> allExpenses = expenseRepository.findAll();
         List<Vehicle> allVehicles = vehicleRepository.findAll();
         List<Driver> allDrivers = driverRepository.findAll();
 
-        long totalTrips = allTrips.size();
+        long totalTrips = tripRepository.count();
 
         double totalRevenue = 0.0;
         for (Trip t : allTrips) {
@@ -98,13 +99,11 @@ public class DashboardService {
                 .filter(d -> !d.isOnLeave() && !busyDriverIds.contains(d.getId()))
                 .count();
 
-        long activeTrips = allTrips.stream()
-                .filter(t -> "Assigned".equals(t.getStatus()) || "In Transit".equals(t.getStatus()))
-                .count();
-
-        long completedTrips = allTrips.stream()
-                .filter(t -> "Completed".equals(t.getStatus()) || "Delivered".equals(t.getStatus()))
-                .count();
+        // Use DB count queries instead of streaming full list
+        long activeTrips = tripRepository.countByStatus("Assigned")
+                + tripRepository.countByStatus("In Transit");
+        long completedTrips = tripRepository.countByStatus("Completed")
+                + tripRepository.countByStatus("Delivered");
 
         // Calculate last 6 months chart
         LocalDate now = LocalDate.now();
@@ -153,7 +152,8 @@ public class DashboardService {
             chart.add(new MonthlyChartPoint(k, labels.get(k), r, exp, p));
         }
 
-        List<Trip> recent = allTrips.stream().limit(6).toList();
+        // Fix: Use findTop10 instead of full table + stream().limit()
+        List<Trip> recent = tripRepository.findTop10ByOrderByCreatedAtDesc();
 
         return new DashboardStatsResponse(
                 totalTrips,

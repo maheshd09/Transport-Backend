@@ -4,10 +4,14 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.transport.dto.PagedResponse;
 import com.transport.dto.TripRequest;
 import com.transport.entity.Driver;
 import com.transport.entity.Trip;
@@ -24,8 +28,8 @@ public class TripService {
 
     private static final Set<String> STATUSES =
             Set.of("Pending", "Assigned", "In Transit", "Delivered", "Completed", "Cancelled");
-    private static final Set<String> FINISHED = Set.of("Completed", "Cancelled");
-    private static final Set<String> BLOCKING = Set.of("Pending", "Assigned", "In Transit");
+    private static final Set<String> FINISHED = Set.of("Completed", "Cancelled", "Delivered");
+    private static final List<String> BLOCKING = List.of("Pending", "Assigned", "In Transit");
 
     private final TripRepository tripRepository;
     private final CustomerRepository customerRepository;
@@ -43,8 +47,27 @@ public class TripService {
         this.expenseRepository = expenseRepository;
     }
 
-    public List<Trip> list() {
-        return tripRepository.findAllByOrderByCreatedAtDesc();
+    // ─── Paginated list with optional filters ────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public PagedResponse<Trip> list(int page, int size, String status, Long vehicleId) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Trip> result;
+
+        boolean hasStatus = status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status);
+        boolean hasVehicle = vehicleId != null;
+
+        if (hasStatus && hasVehicle) {
+            result = tripRepository.findByStatusAndVehicleIdOrderByCreatedAtDesc(status, vehicleId, pageable);
+        } else if (hasStatus) {
+            result = tripRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        } else if (hasVehicle) {
+            result = tripRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId, pageable);
+        } else {
+            result = tripRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+
+        return PagedResponse.of(result);
     }
 
     public Trip get(Long id) {
@@ -56,15 +79,10 @@ public class TripService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Trip not found"));
     }
 
+    // ─── Fix: Use MAX(id) from DB — O(1) with index, no full table scan ─────
     private String nextCode() {
-        int max = 0;
-        for (Trip t : tripRepository.findAll()) {
-            try {
-                max = Math.max(max, Integer.parseInt(t.getCode().replace("TRP-", "")));
-            } catch (Exception ignored) {
-            }
-        }
-        return String.format("TRP-%04d", max + 1);
+        long maxId = tripRepository.findMaxId();
+        return String.format("TRP-%04d", maxId + 1);
     }
 
     private static boolean overlaps(Trip a, Trip b) {
@@ -108,9 +126,10 @@ public class TripService {
             }
         }
 
+        // Fix: Only fetch blocking-status trips for specific vehicle/driver — not all trips
         if (blocking) {
             if (v != null) {
-                for (Trip o : tripRepository.findByVehicleId(v.getId())) {
+                for (Trip o : tripRepository.findByVehicleIdAndStatusIn(v.getId(), BLOCKING)) {
                     if (isConflict(t, o)) {
                         throw new ApiException(v.getNumber() + " is already booked on "
                                 + o.getCode() + " during these dates");
@@ -118,7 +137,7 @@ public class TripService {
                 }
             }
             if (d != null) {
-                for (Trip o : tripRepository.findByDriverId(d.getId())) {
+                for (Trip o : tripRepository.findByDriverIdAndStatusIn(d.getId(), BLOCKING)) {
                     if (isConflict(t, o)) {
                         throw new ApiException(d.getName() + " is already booked on "
                                 + o.getCode() + " during these dates");
@@ -130,7 +149,6 @@ public class TripService {
 
     private boolean isConflict(Trip t, Trip o) {
         if (t.getId() != null && t.getId().equals(o.getId())) return false;
-        if (!BLOCKING.contains(o.getStatus())) return false;
         return overlaps(t, o);
     }
 

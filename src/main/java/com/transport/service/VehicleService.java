@@ -2,6 +2,7 @@ package com.transport.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ import jakarta.transaction.Transactional;
 @Service
 public class VehicleService {
 
-	private final VehicleRepository vehicleRepository;
+    private final VehicleRepository vehicleRepository;
     private final TripRepository tripRepository;
     private final DriverRepository driverRepository;
     private final ExpenseRepository expenseRepository;
@@ -33,25 +34,25 @@ public class VehicleService {
         this.expenseRepository = expenseRepository;
     }
 
-    private static String norm(String s) {
-        return s == null ? "" : s.replaceAll("\\s", "").toLowerCase();
-    }
-
     public List<Vehicle> list() {
-        return vehicleRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .toList();
+        // Fix: Use DB-level sort instead of Java stream sort
+        return vehicleRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @Transactional
     public Vehicle save(VehicleRequest req, Long id) {
-        String n = norm(req.number());
-        vehicleRepository.findAll().stream()
-                .filter(v -> norm(v.getNumber()).equals(n) && !v.getId().equals(id))
-                .findFirst()
-                .ifPresent(v -> {
-                    throw new ApiException("Vehicle " + v.getNumber() + " already exists");
-                });
+        String trimmedNumber = req.number().trim();
+
+        // Fix: Use DB-level existence check instead of findAll() + stream filter
+        if (id == null) {
+            if (vehicleRepository.existsByNumberIgnoreCase(trimmedNumber)) {
+                throw new ApiException("Vehicle " + trimmedNumber + " already exists");
+            }
+        } else {
+            if (vehicleRepository.existsByNumberIgnoreCaseAndIdNot(trimmedNumber, id)) {
+                throw new ApiException("Vehicle " + trimmedNumber + " already exists");
+            }
+        }
 
         Vehicle v;
         if (id != null) {
@@ -60,7 +61,7 @@ public class VehicleService {
         } else {
             v = new Vehicle();
         }
-        v.setNumber(req.number().trim());
+        v.setNumber(trimmedNumber);
         v.setType(req.type());
         v.setModel(req.model());
         v.setCapacityValue(req.capacityValue());

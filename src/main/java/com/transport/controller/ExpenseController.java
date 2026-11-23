@@ -9,9 +9,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.transport.dto.ExpenseRequest;
+import com.transport.dto.PagedResponse;
 import com.transport.entity.Expense;
 import com.transport.service.ExpenseService;
 
@@ -21,16 +23,21 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/expenses")
 public class ExpenseController {
 
-	
-	private final ExpenseService service;
+    private final ExpenseService service;
 
     public ExpenseController(ExpenseService service) {
         this.service = service;
     }
 
+    /**
+     * GET /api/expenses?page=0&size=50&vehicleId=3
+     */
     @GetMapping
-    public List<Expense> list() {
-        return service.list();
+    public PagedResponse<Expense> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) Long vehicleId) {
+        return service.list(page, size, vehicleId);
     }
 
     @GetMapping("/trip/{tripId}")

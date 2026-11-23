@@ -19,6 +19,8 @@ import com.transport.repository.DriverAdvanceRepository;
 import com.transport.repository.DriverRepository;
 import com.transport.repository.TripRepository;
 
+import org.springframework.data.domain.Sort;
+
 @Service
 public class DriverService {
 
@@ -35,9 +37,8 @@ public class DriverService {
 
     @Transactional(readOnly = true)
     public List<DriverResponse> list() {
-        List<Driver> drivers = driverRepository.findAll().stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .toList();
+        // Fix: DB-level sort instead of Java stream sort
+        List<Driver> drivers = driverRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
         if (drivers.isEmpty()) return List.of();
         Map<Long, List<DriverAdvance>> byDriver = advanceRepository
                 .findByDriverIdIn(drivers.stream().map(Driver::getId).toList())
@@ -48,6 +49,7 @@ public class DriverService {
                 .map(d -> DriverResponse.of(d, byDriver.getOrDefault(d.getId(), List.of())))
                 .toList();
     }
+
 
     private DriverResponse one(Driver d) {
         return DriverResponse.of(d, advanceRepository.findByDriverIdOrderByDateDesc(d.getId()));
