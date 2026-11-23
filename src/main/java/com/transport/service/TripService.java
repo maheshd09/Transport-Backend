@@ -47,26 +47,16 @@ public class TripService {
         this.expenseRepository = expenseRepository;
     }
 
-    // ─── Paginated list with optional filters ────────────────────────────────
-
+    // ─── Paginated list with optional filters and search ─────────────────────
     @Transactional(readOnly = true)
-    public PagedResponse<Trip> list(int page, int size, String status, Long vehicleId) {
+    public PagedResponse<Trip> list(int page, int size, String status, Long vehicleId, String q) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Trip> result;
 
-        boolean hasStatus = status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status);
-        boolean hasVehicle = vehicleId != null;
+        boolean hasStatus = status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status) && !"__all__".equalsIgnoreCase(status);
+        String cleanStatus = hasStatus ? status.trim() : null;
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
 
-        if (hasStatus && hasVehicle) {
-            result = tripRepository.findByStatusAndVehicleIdOrderByCreatedAtDesc(status, vehicleId, pageable);
-        } else if (hasStatus) {
-            result = tripRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
-        } else if (hasVehicle) {
-            result = tripRepository.findByVehicleIdOrderByCreatedAtDesc(vehicleId, pageable);
-        } else {
-            result = tripRepository.findAllByOrderByCreatedAtDesc(pageable);
-        }
-
+        Page<Trip> result = tripRepository.findWithFilters(cleanStatus, vehicleId, cleanQ, pageable);
         return PagedResponse.of(result);
     }
 

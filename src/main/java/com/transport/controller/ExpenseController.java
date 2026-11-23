@@ -36,7 +36,9 @@ public class ExpenseController {
     public PagedResponse<Expense> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            @RequestParam(required = false) String vehicleId) {
+            @RequestParam(required = false) String vehicleId,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String q) {
         Long cleanVehicleId = null;
         if (vehicleId != null && !vehicleId.isBlank() && !"ALL".equalsIgnoreCase(vehicleId) && !"__all__".equalsIgnoreCase(vehicleId)) {
             try {
@@ -44,7 +46,11 @@ public class ExpenseController {
             } catch (NumberFormatException ignored) {
             }
         }
-        return service.list(page, size, cleanVehicleId);
+        String cleanCategory = (category != null && !category.isBlank() && !"ALL".equalsIgnoreCase(category) && !"__all__".equalsIgnoreCase(category))
+                ? category.trim() : null;
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        return service.list(page, size, cleanVehicleId, cleanCategory, cleanQ);
     }
 
     @GetMapping("/trip/{tripId}")

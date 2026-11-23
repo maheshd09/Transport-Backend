@@ -12,7 +12,7 @@ import com.transport.entity.Trip;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
-    // Pagination with optional filters — used by list API
+    // Pagination with optional filters & search — used by list API
     Page<Trip> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Trip> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
@@ -20,6 +20,19 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     Page<Trip> findByVehicleIdOrderByCreatedAtDesc(Long vehicleId, Pageable pageable);
 
     Page<Trip> findByStatusAndVehicleIdOrderByCreatedAtDesc(String status, Long vehicleId, Pageable pageable);
+
+    @Query("SELECT t FROM Trip t WHERE " +
+           "(:status IS NULL OR t.status = :status) AND " +
+           "(:vehicleId IS NULL OR t.vehicleId = :vehicleId) AND " +
+           "(:q IS NULL OR LOWER(t.code) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(t.pickupLocation) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(t.dropLocation) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(t.material) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "ORDER BY t.createdAt DESC")
+    Page<Trip> findWithFilters(@org.springframework.data.repository.query.Param("status") String status,
+                               @org.springframework.data.repository.query.Param("vehicleId") Long vehicleId,
+                               @org.springframework.data.repository.query.Param("q") String q,
+                               Pageable pageable);
 
     // For dropdown lookups (no pagination needed — only active trips)
     List<Trip> findByVehicleId(Long vehicleId);

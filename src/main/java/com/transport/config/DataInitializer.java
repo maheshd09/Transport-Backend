@@ -20,7 +20,7 @@ public class DataInitializer {
     CommandLineRunner initData(UserRepository userRepo, 
                               PasswordEncoder encoder,
                               @Value("${app.admin.username:admin}") String username,
-                              @Value("${app.admin.password:Admin@12345}") String password) {
+                              @Value("${app.admin.password:admin123}") String password) {
         return args -> {
             // Ensure default Administrator account exists
             if (!userRepo.existsByUsername(username)) {

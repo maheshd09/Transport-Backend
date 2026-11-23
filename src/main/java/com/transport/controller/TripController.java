@@ -39,7 +39,8 @@ public class TripController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String vehicleId) {
+            @RequestParam(required = false) String vehicleId,
+            @RequestParam(required = false) String q) {
         // Cap page size to prevent abuse
         int safeSize = Math.min(size, 200);
 
@@ -56,7 +57,9 @@ public class TripController {
             }
         }
 
-        return service.list(page, safeSize, cleanStatus, cleanVehicleId);
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        return service.list(page, safeSize, cleanStatus, cleanVehicleId, cleanQ);
     }
 
     @GetMapping("/{id}")

@@ -51,8 +51,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardStatsResponse getStats() {
-        List<Trip> allTrips = tripRepository.findAllByOrderByCreatedAtDesc(
-                org.springframework.data.domain.PageRequest.of(0, 500)).getContent();
+        List<Trip> allTrips = tripRepository.findAll();
         List<Expense> allExpenses = expenseRepository.findAll();
         List<Vehicle> allVehicles = vehicleRepository.findAll();
         List<Driver> allDrivers = driverRepository.findAll();

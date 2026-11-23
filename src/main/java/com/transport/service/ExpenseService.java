@@ -35,15 +35,17 @@ public class ExpenseService {
         this.tripRepository = tripRepository;
     }
 
-    // ─── Paginated list with optional vehicle filter ──────────────────────────
+    // ─── Paginated list with optional vehicle, category, and search filters ──
     @Transactional(readOnly = true)
-    public PagedResponse<Expense> list(int page, int size, Long vehicleId) {
+    public PagedResponse<Expense> list(int page, int size, Long vehicleId, String category, String q) {
         int safeSize = Math.min(size, 200);
         Pageable pageable = PageRequest.of(page, safeSize);
-        if (vehicleId != null) {
-            return PagedResponse.of(expenseRepository.findByVehicleIdOrderByDateDesc(vehicleId, pageable));
-        }
-        return PagedResponse.of(expenseRepository.findAllByOrderByDateDescCreatedAtDesc(pageable));
+
+        boolean hasCategory = category != null && !category.isBlank() && !"ALL".equalsIgnoreCase(category) && !"__all__".equalsIgnoreCase(category);
+        String cleanCategory = hasCategory ? category.trim() : null;
+        String cleanQ = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        return PagedResponse.of(expenseRepository.findWithFilters(vehicleId, cleanCategory, cleanQ, pageable));
     }
 
     // For trip detail page — small list, no pagination needed
