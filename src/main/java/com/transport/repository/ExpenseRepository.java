@@ -19,7 +19,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT e FROM Expense e WHERE " +
            "(:vehicleId IS NULL OR e.vehicleId = :vehicleId) AND " +
            "(:category IS NULL OR e.category = :category) AND " +
-           "(:q IS NULL OR LOWER(e.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "(:q IS NULL OR LOWER(e.description) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(e.category) LIKE LOWER(CONCAT('%', :q, '%'))) " +
            "ORDER BY e.date DESC, e.createdAt DESC")
     Page<Expense> findWithFilters(@org.springframework.data.repository.query.Param("vehicleId") Long vehicleId,
                                  @org.springframework.data.repository.query.Param("category") String category,
