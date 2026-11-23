@@ -27,12 +27,15 @@ public class AuthController {
     private final AuthenticationManager authManager;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public AuthController(AuthenticationManager authManager, UserRepository userRepository,
-                          JwtService jwtService) {
+                          JwtService jwtService,
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/login")
@@ -56,5 +59,19 @@ public class AuthController {
     public Map<String, Object> me(org.springframework.security.core.Authentication auth) {
         return Map.of("username", auth.getName(),
                 "role", auth.getAuthorities().iterator().next().getAuthority());
+    }
+
+    public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(org.springframework.security.core.Authentication auth,
+                                            @RequestBody ChangePasswordRequest req) {
+        User u = userRepository.findByUsername(auth.getName()).orElseThrow();
+        if (!passwordEncoder.matches(req.currentPassword(), u.getPasswordHash())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Current password does not match"));
+        }
+        u.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        userRepository.save(u);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 }

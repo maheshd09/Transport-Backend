@@ -1,5 +1,7 @@
 package com.transport.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -12,20 +14,25 @@ import com.transport.repository.UserRepository;
 @Configuration
 public class DataInitializer {
 
-	@Bean
-    CommandLineRunner createAdmin(UserRepository repo, PasswordEncoder encoder,
-                                  @Value("${app.admin.username:admin}") String username,
-                                  @Value("${app.admin.password:Admin@12345}") String password) {
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
+    @Bean
+    CommandLineRunner initData(UserRepository userRepo, 
+                              PasswordEncoder encoder,
+                              @Value("${app.admin.username:admin}") String username,
+                              @Value("${app.admin.password:Admin@12345}") String password) {
         return args -> {
-            if (!repo.existsByUsername(username)) {
+            // Ensure default Administrator account exists
+            if (!userRepo.existsByUsername(username)) {
                 User u = new User();
                 u.setUsername(username);
                 u.setPasswordHash(encoder.encode(password));
                 u.setFullName("Administrator");
                 u.setRole("ADMIN");
-                repo.save(u);
-                System.out.println(">>> Admin user created: " + username);
+                userRepo.save(u);
+                log.info("Administrator account initialized: {}", username);
             }
         };
     }
 }
+

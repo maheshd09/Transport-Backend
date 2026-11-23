@@ -9,5 +9,6 @@ import com.transport.entity.Expense;
 public interface ExpenseRepository extends JpaRepository<Expense, Long>{
 
 	List<Expense> findByVehicleId(Long vehicleId);
+    List<Expense> findByTripId(Long tripId);
     void deleteByTripId(Long tripId);
 }

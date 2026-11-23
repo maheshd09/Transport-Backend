@@ -33,6 +33,11 @@ public class ExpenseController {
         return service.list();
     }
 
+    @GetMapping("/trip/{tripId}")
+    public List<Expense> listByTrip(@PathVariable Long tripId) {
+        return service.listByTripId(tripId);
+    }
+
     @PostMapping
     public Expense create(@Valid @RequestBody ExpenseRequest req) {
         return service.save(req, null);

@@ -38,6 +38,10 @@ public class ExpenseService {
                 .toList();
     }
 
+    public List<Expense> listByTripId(Long tripId) {
+        return expenseRepository.findByTripId(tripId);
+    }
+
     @Transactional
     public Expense save(ExpenseRequest req, Long id) {
         if (req.amount().compareTo(BigDecimal.ZERO) <= 0) {
